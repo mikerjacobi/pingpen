@@ -1,0 +1,18 @@
+---
+Resources:
+  PingpenDB:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      Engine: aurora
+      EngineMode: serverless
+      Port: 3306
+      DatabaseName: pingpen
+      MasterUsername: pingpen_user
+      MasterUserPassword: pingpen_pw
+      # VpcSecurityGroupIds:
+      #  - Ref: ServerlessStorageSecurityGroup
+      # DBSubnetGroupName:
+      #  Ref: ServerlessRDSSubnetGroup
+      Tags:
+        - Key: Name
+          Value: "pingpen database"

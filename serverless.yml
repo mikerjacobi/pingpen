@@ -1,0 +1,41 @@
+---
+service: pingpen
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+# frameworkVersion: "=X.X.X"
+frameworkVersion: ">=1.28.0 <2.0.0"
+
+# doesn't work for go yet
+# plugins:
+#  - serverless-offline
+
+provider:
+  name: aws
+  runtime: go1.x
+  stage: ${opt:stage, 'dev'}
+  region: us-west-2
+  environment:
+    GRID: ${self:provider.stage}
+    TABLE: notes
+    REGION: us-west-2
+
+package:
+  exclude:
+    - ./**
+  include:
+    - ./api/bin/**
+
+functions:
+  create:
+    handler: api/bin/create
+    events:
+      - http:
+          path: notes
+          method: post
+          authorizer: aws_iam
+          cors: true
+
+resources:
+  - ${file(resources/mysql.yml)}
+
