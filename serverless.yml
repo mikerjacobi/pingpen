@@ -15,10 +15,31 @@ provider:
   runtime: go1.x
   stage: ${opt:stage, 'dev'}
   region: us-west-2
+  vpcid: vpc-b72c3ed2
+  devboxSecurityGroupId: sg-3ec30e59 
+  dbname: pingpen
+
+  dbhost: 
+    Fn::GetAtt: [ PingpenDB, Endpoint.Address ]
+
+  #how do i set these as secrets
+  dbuser: pingpen_user
+  dbpw: pingpen_pw
+
   environment:
     GRID: ${self:provider.stage}
-    TABLE: notes
-    REGION: us-west-2
+    REGION: $(self:provider.region}
+    DBHOST: ${self:provider.dbhost}
+    DBUSER: ${self:provider.dbuser}
+    DBPW: ${self:provider.dbpw}
+    DBNAME: ${self:provider.dbname}
+  vpc:
+    securityGroupIds: 
+      - Ref: ServerlessSecurityGroup
+    subnetIds: 
+      - subnet-866781e2
+      - subnet-a9655fde
+      - subnet-c765359e
 
 package:
   exclude:
@@ -37,5 +58,6 @@ functions:
           cors: true
 
 resources:
-  - ${file(resources/mysql.yml)}
+  - ${file(infra/network.yml)}
+  - ${file(infra/mysql.yml)}
 

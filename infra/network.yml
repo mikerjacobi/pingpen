@@ -1,0 +1,46 @@
+---
+  Resources:
+    #ServerlessSubnetA:
+    #  Type: AWS::EC2::Subnet
+    #  Properties:
+    #    VpcId: ${self:provider.vpcid}
+    #    AvailabilityZone: ${self:provider.region}a
+    #    CidrBlock: "172.31.1.0/24"
+    #ServerlessSubnetB:
+    #  Type: AWS::EC2::Subnet
+    #  Properties:
+    #    VpcId: ${self:provider.vpcid}
+    #    AvailabilityZone: ${self:provider.region}b
+    #    CidrBlock: "172.31.2.0/24"
+    #ServerlessSubnetC:
+    #  Type: AWS::EC2::Subnet
+    #  Properties:
+    #    VpcId: ${self:provider.vpcid}
+    #    AvailabilityZone: ${self:provider.region}c
+    #    CidrBlock: "172.31.3.0/24"
+    ServerlessSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: SecurityGroup for Serverless Functions
+        VpcId: ${self:provider.vpcid}
+    ServerlessStorageSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: Ingress for RDS Instance
+        VpcId: ${self:provider.vpcid}
+        SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '3306'
+          ToPort: '3306'
+          SourceSecurityGroupId:
+            Ref: ServerlessSecurityGroup
+        - IpProtocol: tcp
+          FromPort: '3306'
+          ToPort: '3306'
+          SourceSecurityGroupId: ${self:provider.devboxSecurityGroupId}
+    ServerlessRDSSubnetGroup:
+      Type: AWS::RDS::DBSubnetGroup
+      Properties:
+        DBSubnetGroupDescription: "RDS Subnet Group"
+        SubnetIds: ${self:provider.vpc.subnetIds}
+
