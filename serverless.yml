@@ -25,14 +25,16 @@ provider:
   #how do i set these as secrets
   dbuser: pingpen_user
   dbpw: pingpen_pw
+  secrets: ${file(infra/secrets.yml):${self:provider.stage}, file(infra/secrets.yml):default}
 
   environment:
     GRID: ${self:provider.stage}
     REGION: $(self:provider.region}
     DBHOST: ${self:provider.dbhost}
     DBUSER: ${self:provider.dbuser}
-    DBPW: ${self:provider.dbpw}
+    DBPW: ${self:provider.secrets.database_password}
     DBNAME: ${self:provider.dbname}
+
   vpc:
     securityGroupIds: 
       - Ref: ServerlessSecurityGroup
@@ -40,6 +42,7 @@ provider:
       - subnet-866781e2
       - subnet-a9655fde
       - subnet-c765359e
+
 
 package:
   exclude:
@@ -58,6 +61,10 @@ functions:
           cors: true
 
 resources:
+  - ${file(infra/api-gateway-errors.yml)}
   - ${file(infra/network.yml)}
   - ${file(infra/mysql.yml)}
+  - ${file(infra/s3.yml)}
+  - ${file(infra/cognito-user-pool.yml)}
+  - ${file(infra/cognito-identity-pool.yml)}
 
