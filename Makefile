@@ -1,28 +1,31 @@
-deploy:
-	cd server; \
-	GOOS=linux go build ./main.go; \
-	zip main.zip ./main; \
-	aws lambda update-function-code \
-	  --function-name pingpen_add \
-	  --zip-file fileb://main.zip; \
-	aws lambda update-function-code \
-	  --function-name pingpen_sub \
-	  --zip-file fileb://main.zip 
-new_lambda:
-	cd server; \
-	GOOS=linux go build ./main.go; \
-	zip main.zip ./main; \
-	aws lambda create-function \
-	  --region us-west-2 \
-	  --function-name pingpen_$(FUNC) \
-	  --memory 128 \
-	  --role arn:aws:iam::532898105683:role/LambdaDeployer \
-	  --runtime go1.x \
-	  --zip-file fileb://main.zip \
-	  --handler main 
-	  #--environment Variables="{function=$(FUNC)}"
-pb: server/pb/service.proto
-	protoc -I$(GOPATH)/src/github.com/google/protobuf/src -I$(GOPATH)/src/github.com/mikerjacobi/pingpen/server/pb --go_out=./server/pb $(GOPATH)/src/github.com/mikerjacobi/pingpen/server/pb/*.proto
-mysql:
-	mysql -hnotify.cs9ds6yfnikc.us-east-1.rds.amazonaws.com -udbuser -p$(shell cat /etc/secrets/notify-db.json | grep password | cut -d'"' -f4) -Dnotify
+.PHONY: build clean deploy
+
+#common commands
+
+build:
+	cd api && env GOOS=linux go build -ldflags="-s -w" -o bin/create lib/create/main.go
+
+clean:
+	rm -rf ./api/bin
+
+# real env commands
+deploy: clean build
+	sls deploy --verbose
+
+goose:
+	cd db && goose mysql "pingpen_user:$(PINGPENPW)@tcp($(PINGPENDB):3306)/pingpen?parseTime=true" $(filter-out $@,$(MAKECMDGOALS))
+
+#creates a fresh sandbox environment
+sandbox: clean build
+	docker stack deploy -c sandbox.yml pingpen
+
+devgoose:
+	cd db && goose mysql "root:password@tcp(127.0.0.1:3306)/pingpen?parseTime=true"  $(filter-out $@,$(MAKECMDGOALS))
+
+devdeploy: clean build
+	docker service scale -d pingpen_post_note=0
+	docker service scale -d pingpen_post_note=1
+%:      
+	@:    
+
 

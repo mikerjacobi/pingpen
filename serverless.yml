@@ -1,0 +1,70 @@
+---
+service: pingpen
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+# frameworkVersion: "=X.X.X"
+frameworkVersion: ">=1.28.0 <2.0.0"
+
+# doesn't work for go yet
+# plugins:
+#  - serverless-offline
+
+provider:
+  name: aws
+  runtime: go1.x
+  stage: ${opt:stage, 'dev'}
+  region: us-west-2
+  vpcid: vpc-b72c3ed2
+  devboxSecurityGroupId: sg-3ec30e59 
+  dbname: pingpen
+
+  dbhost: 
+    Fn::GetAtt: [ PingpenDB, Endpoint.Address ]
+
+  #how do i set these as secrets
+  dbuser: pingpen_user
+  dbpw: pingpen_pw
+  secrets: ${file(infra/secrets.yml):${self:provider.stage}, file(infra/secrets.yml):default}
+
+  environment:
+    GRID: ${self:provider.stage}
+    REGION: $(self:provider.region}
+    DBHOST: ${self:provider.dbhost}
+    DBUSER: ${self:provider.dbuser}
+    DBPW: ${self:provider.secrets.database_password}
+    DBNAME: ${self:provider.dbname}
+
+  vpc:
+    securityGroupIds: 
+      - Ref: ServerlessSecurityGroup
+    subnetIds: 
+      - subnet-866781e2
+      - subnet-a9655fde
+      - subnet-c765359e
+
+
+package:
+  exclude:
+    - ./**
+  include:
+    - ./api/bin/**
+
+functions:
+  create:
+    handler: api/bin/create
+    events:
+      - http:
+          path: notes
+          method: post
+          authorizer: aws_iam
+          cors: true
+
+resources:
+  - ${file(infra/api-gateway-errors.yml)}
+  - ${file(infra/network.yml)}
+  - ${file(infra/mysql.yml)}
+  - ${file(infra/s3.yml)}
+  - ${file(infra/cognito-user-pool.yml)}
+  - ${file(infra/cognito-identity-pool.yml)}
+

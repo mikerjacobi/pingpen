@@ -1,3 +1,9 @@
+# Serverless directories
+.serverless
+
+# golang output binary directory
+bin
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
@@ -11,7 +17,4 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-server/main
-server/main.zip
-go.*
-
+infra/secrets.yml
