@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
+	"github.com/husobee/vestigo"
 	"github.com/sirupsen/logrus"
 )
 
@@ -46,13 +48,11 @@ func dosql(db *sql.DB) string {
 }
 
 // Handler is our lambda handler invoked by the `lambda.Start` function call
-func (c *Controller) Handler(ctx context.Context) (events.APIGatewayProxyResponse, error) {
+func (c *Controller) Handler(ctx context.Context, req *events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var buf bytes.Buffer
 	resp := events.APIGatewayProxyResponse{}
 
-	logrus.Infof("here1")
 	connStr := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?parseTime=true", c.dbuser, c.dbpw, c.dbhost, c.dbname)
-	logrus.Infof("connstr: %s", connStr)
 
 	db, err := sql.Open("mysql", connStr)
 	if err != nil {
@@ -77,7 +77,7 @@ func (c *Controller) Handler(ctx context.Context) (events.APIGatewayProxyRespons
 		resp.StatusCode = 404
 		return resp, err
 	}
-	logrus.Infof("here3")
+	logrus.Infof("here8")
 	json.HTMLEscape(&buf, body)
 
 	resp.StatusCode = 200
@@ -91,6 +91,29 @@ func (c *Controller) Handler(ctx context.Context) (events.APIGatewayProxyRespons
 	return resp, nil
 }
 
+func (c *Controller) httpHandler(rw http.ResponseWriter, r *http.Request) {
+	req := &events.APIGatewayProxyRequest{}
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		rw.WriteHeader(http.StatusBadRequest)
+		logrus.WithError(err).Errorf("failed to unmarshal request into api gateway request")
+		return
+	}
+
+	resp, err := c.Handler(context.Background(), req)
+	rw.WriteHeader(resp.StatusCode)
+	if err != nil {
+		logrus.WithError(err).Errorf("failed to execute handler")
+		return
+	}
+
+	respBody, err := json.Marshal(resp.Body)
+	if err != nil {
+		logrus.WithError(err).Errorf("failed to marshal response")
+		return
+	}
+	rw.Write(respBody)
+}
+
 func main() {
 	c := &Controller{
 		Grid:   os.Getenv("GRID"),
@@ -101,5 +124,15 @@ func main() {
 		dbpw:   os.Getenv("DBPW"),
 		dbname: os.Getenv("DBNAME"),
 	}
-	lambda.Start(c.Handler)
+
+	logrus.Info(c)
+	if c.Grid == "sandbox" {
+		port := os.Getenv("PORT")
+		logrus.Info(port)
+		router := vestigo.NewRouter()
+		router.Post("/note", c.httpHandler)
+		logrus.Fatal(http.ListenAndServe("0.0.0.0:"+port, router))
+	} else {
+		lambda.Start(c.Handler)
+	}
 }
