@@ -77,7 +77,7 @@ func (c *Controller) Handler(ctx context.Context, req *events.APIGatewayProxyReq
 		resp.StatusCode = 404
 		return resp, err
 	}
-	logrus.Infof("here8")
+	logrus.Infof("here16")
 	json.HTMLEscape(&buf, body)
 
 	resp.StatusCode = 200
